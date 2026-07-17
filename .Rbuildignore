@@ -1,0 +1,11 @@
+^\.Rprofile$
+^renv$
+^renv\.lock$
+^material$
+^tmp$
+^\.DS_Store$
+^\.github$
+^_pkgdown\.yml$
+^README\.Rmd$
+^cran-comments\.md$
+^LICENSE\.md$

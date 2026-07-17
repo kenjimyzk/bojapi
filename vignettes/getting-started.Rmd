@@ -1,0 +1,105 @@
+---
+title: "Getting started with bojapi"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with bojapi}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+`bojapi` provides an unofficial R interface to the Bank of Japan Time-Series
+Data Search API. The API does not require authentication.
+
+## Discover a series
+
+Start with a database and search its metadata. Metadata are cached for 24 hours
+by default to reduce traffic to the BOJ service.
+
+```{r}
+library(bojapi)
+
+boj_databases()
+fx_metadata <- boj_metadata("FM08")
+boj_search("U.S. Dollar", metadata = fx_metadata)
+```
+
+Use `lang = "jp"` for Japanese names, units, categories, and notes.
+
+```{r}
+boj_search("米ドル", db = "FM08", lang = "jp")
+```
+
+## Retrieve observations
+
+Supply series codes without a database prefix. Named vectors create stable,
+analysis-friendly aliases while retaining the original code.
+
+```{r}
+fx <- boj_data(
+  db = "FM08",
+  code = c(usd_yen = "FXERM07"),
+  start_date = "202401",
+  end_date = "202412"
+)
+fx
+```
+
+The long result preserves the exact BOJ period identifier in `time`. The `date`
+column is frequency-aware and uses the first day of a period. For example,
+quarter `202402` becomes April 1, 2024; fiscal year `2024` becomes April 1,
+2024. Use `time` when the original statistical period is the relevant object.
+
+Wide output is available as a convenience:
+
+```{r}
+boj_data(
+  "FM08",
+  c(month_end = "FXERM06", monthly_average = "FXERM07"),
+  start_date = "202401",
+  end_date = "202412",
+  wide = TRUE
+)
+```
+
+## Retrieve a hierarchy
+
+Metadata include hierarchy headings and `layer1` through `layer5`. Pass the
+desired path, including `"*"` wildcards, to `boj_layer()`.
+
+```{r}
+bp <- boj_metadata("BP01", include_groups = TRUE)
+boj_layer(
+  db = "BP01",
+  frequency = "M",
+  layer = c(1, 1, 1),
+  start_date = "202504",
+  end_date = "202509"
+)
+```
+
+The BOJ rejects a layer condition matching more than 1,250 series before the
+frequency filter is applied. Split very broad hierarchy requests into narrower
+paths.
+
+## Be a considerate API user
+
+The BOJ prohibits excessive access frequency. `bojapi` waits one second between
+automatic pages and 250-code chunks. You may increase the delay globally:
+
+```{r}
+options(bojapi.wait = 2)
+```
+
+Before publishing a service, read the current official notice. It asks service
+publishers to display a specified credit and notify the BOJ Research and
+Statistics Department.
+
+```{r}
+boj_api_credit("en")
+boj_api_credit("jp")
+```
+

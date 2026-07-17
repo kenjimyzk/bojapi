@@ -1,0 +1,19 @@
+url: https://kenjimyzk.github.io/bojapi/
+template:
+  bootstrap: 5
+reference:
+  - title: Retrieve data
+    contents:
+      - boj_data
+      - boj_layer
+  - title: Find series
+    contents:
+      - boj_search
+      - boj_metadata
+      - boj_cache
+      - boj_databases
+  - title: API use
+    contents:
+      - boj_api_credit
+      - bojapi-package
+
