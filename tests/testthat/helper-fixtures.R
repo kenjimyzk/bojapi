@@ -3,7 +3,7 @@ fixture_series <- function(
     lang = "en",
     frequency = "MONTHLY",
     times = list(202401L, 202402L),
-    values = list(146.59, NULL)) {
+    values = list(1.25, NULL)) {
   out <- list(
     SERIES_CODE = code,
     FREQUENCY = frequency,
@@ -70,4 +70,3 @@ fixture_metadata <- function(lang = "en") {
   }
   list(group, series)
 }
-

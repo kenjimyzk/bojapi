@@ -9,14 +9,165 @@ boj_metadata_cache_file <- function(db, lang, cache_dir) {
   file.path(cache_dir, paste0(tolower(db), "-", lang, ".rds"))
 }
 
+boj_metadata_cache_is_link <- function(path) {
+  link <- suppressWarnings(Sys.readlink(path))
+  length(link) == 1L && !is.na(link) && nzchar(link)
+}
+
+boj_metadata_cache_entry <- function(path, max_age) {
+  is_link <- boj_metadata_cache_is_link(path)
+  if (!file.exists(path) && !is_link) {
+    return(list(status = "missing", data = NULL))
+  }
+
+  info <- suppressWarnings(file.info(path))
+  if (nrow(info) != 1L || is.na(info$isdir) || isTRUE(info$isdir) || is.na(info$mtime)) {
+    return(list(status = "invalid", data = NULL))
+  }
+
+  age <- as.numeric(difftime(Sys.time(), info$mtime, units = "secs"))
+  if (!is.finite(age)) {
+    return(list(status = "invalid", data = NULL))
+  }
+  if (age > max_age) {
+    return(list(status = "expired", data = NULL))
+  }
+
+  readable <- TRUE
+  out <- tryCatch(
+    readRDS(path),
+    error = function(e) {
+      readable <<- FALSE
+      NULL
+    }
+  )
+  required <- names(boj_empty_metadata())
+  if (!readable || !inherits(out, "data.frame") || !all(required %in% names(out))) {
+    return(list(status = "invalid", data = NULL))
+  }
+  list(status = "valid", data = out)
+}
+
+boj_remove_metadata_cache_file <- function(path, warn = TRUE) {
+  is_link <- boj_metadata_cache_is_link(path)
+  if (!file.exists(path) && !is_link) return(invisible(TRUE))
+
+  info <- suppressWarnings(file.info(path))
+  if (!is_link && nrow(info) == 1L && isTRUE(info$isdir)) {
+    if (isTRUE(warn)) {
+      warning("Refusing to remove a directory found at a metadata cache path.", call. = FALSE)
+    }
+    return(invisible(FALSE))
+  }
+
+  ok <- isTRUE(file.remove(path))
+  if (!ok && isTRUE(warn)) {
+    warning("Could not remove an unusable bojapi metadata cache file.", call. = FALSE)
+  }
+  invisible(ok)
+}
+
 boj_read_metadata_cache <- function(path, max_age) {
-  if (!file.exists(path)) return(NULL)
-  age <- as.numeric(difftime(Sys.time(), file.info(path)$mtime, units = "secs"))
-  if (is.na(age) || age > max_age) return(NULL)
-  out <- tryCatch(readRDS(path), error = function(e) NULL)
-  if (!inherits(out, "data.frame")) return(NULL)
+  entry <- boj_metadata_cache_entry(path, max_age)
+  if (entry$status %in% c("expired", "invalid")) {
+    boj_remove_metadata_cache_file(path)
+    return(NULL)
+  }
+  if (!identical(entry$status, "valid")) return(NULL)
+
+  out <- entry$data
   attr(out, "source") <- "cache"
   out
+}
+
+boj_metadata_cache_paths <- function(db, lang, cache_dir) {
+  if (!is.null(db)) {
+    return(vapply(db, boj_metadata_cache_file, character(1L), lang = lang, cache_dir = cache_dir))
+  }
+  if (!dir.exists(cache_dir)) return(character())
+  sort(list.files(
+    cache_dir,
+    pattern = "^[a-z0-9]{2,4}-(en|jp)\\.rds$",
+    full.names = TRUE
+  ))
+}
+
+boj_manage_metadata_cache <- function(action, db, lang, max_age, cache_dir) {
+  paths <- boj_metadata_cache_paths(db, lang, cache_dir)
+  if (length(paths) == 0L) {
+    return(tibble::tibble(
+      file = character(), path = character(), status = character(), reason = character()
+    ))
+  }
+
+  status <- reason <- character(length(paths))
+  for (i in seq_along(paths)) {
+    if (identical(action, "clear")) {
+      reason[[i]] <- "clear"
+      exists <- file.exists(paths[[i]]) || boj_metadata_cache_is_link(paths[[i]])
+      if (!exists) {
+        status[[i]] <- "missing"
+      } else {
+        status[[i]] <- if (boj_remove_metadata_cache_file(paths[[i]], warn = FALSE)) {
+          "removed"
+        } else {
+          "failed"
+        }
+      }
+      next
+    }
+
+    entry <- boj_metadata_cache_entry(paths[[i]], max_age)
+    if (identical(entry$status, "valid")) {
+      status[[i]] <- "kept"
+      reason[[i]] <- "fresh"
+    } else if (identical(entry$status, "missing")) {
+      status[[i]] <- "missing"
+      reason[[i]] <- "missing"
+    } else {
+      status[[i]] <- if (boj_remove_metadata_cache_file(paths[[i]], warn = FALSE)) {
+        "removed"
+      } else {
+        "failed"
+      }
+      reason[[i]] <- entry$status
+    }
+  }
+
+  tibble::tibble(
+    file = basename(paths),
+    path = paths,
+    status = status,
+    reason = reason
+  )
+}
+
+boj_replace_metadata_cache_file <- function(temporary, path) {
+  if (suppressWarnings(file.rename(temporary, path))) return(TRUE)
+
+  is_link <- boj_metadata_cache_is_link(path)
+  if (!file.exists(path) && !is_link) return(FALSE)
+  info <- suppressWarnings(file.info(path))
+  if (!is_link && nrow(info) == 1L && isTRUE(info$isdir)) return(FALSE)
+
+  backup <- tempfile(
+    pattern = paste0(".", basename(path), "-backup-"),
+    tmpdir = dirname(path)
+  )
+  if (!suppressWarnings(file.rename(path, backup))) return(FALSE)
+
+  replaced <- FALSE
+  on.exit({
+    backup_exists <- file.exists(backup) || boj_metadata_cache_is_link(backup)
+    if (!replaced && backup_exists && !file.exists(path)) {
+      suppressWarnings(file.rename(backup, path))
+    }
+  }, add = TRUE)
+
+  if (!suppressWarnings(file.rename(temporary, path))) return(FALSE)
+  replaced <- TRUE
+  boj_remove_metadata_cache_file(backup, warn = FALSE)
+  TRUE
 }
 
 boj_write_metadata_cache <- function(data, path) {
@@ -25,9 +176,16 @@ boj_write_metadata_cache <- function(data, path) {
     warning("Could not create the bojapi metadata cache directory.", call. = FALSE)
     return(invisible(FALSE))
   }
+
+  temporary <- tempfile(
+    pattern = paste0(".", basename(path), "-"),
+    tmpdir = directory,
+    fileext = ".tmp"
+  )
+  on.exit(boj_remove_metadata_cache_file(temporary, warn = FALSE), add = TRUE)
   ok <- tryCatch({
-    saveRDS(data, path)
-    TRUE
+    saveRDS(data, temporary)
+    boj_replace_metadata_cache_file(temporary, path)
   }, error = function(e) FALSE)
   if (!ok) warning("Could not write the bojapi metadata cache.", call. = FALSE)
   invisible(ok)
@@ -110,25 +268,41 @@ boj_metadata <- function(
   tibble::as_tibble(out)
 }
 
-#' Refresh metadata for one or more Bank of Japan databases
+#' Refresh or manage Bank of Japan metadata caches
 #'
 #' `boj_cache()` is the counterpart to `WDI::WDIcache()`: it retrieves current
 #' BOJ metadata and saves it to the local cache used by [boj_search()]. When
 #' `db = NULL`, all databases in [boj_databases()] are refreshed. This takes
 #' about one minute with the default one-second interval.
 #'
+#' Set `action = "clear"` to remove matching cache entries, or
+#' `action = "prune"` to remove only expired or invalid entries. For these
+#' management actions, `db = NULL` targets all bojapi metadata cache files in
+#' `cache_dir`, including both languages. Supplying `db` limits the operation
+#' to those databases and the selected `lang`. Other files and directories are
+#' never recursively removed.
+#'
 #' @param db Character vector of database identifiers, or `NULL` for all known
-#'   databases.
+#'   databases when refreshing. For cache management, `NULL` means all bojapi
+#'   metadata cache entries.
 #' @param refresh Ignore current cache entries and download fresh metadata.
+#'   Used only when `action = "refresh"`.
+#' @param action Cache operation: `"refresh"` preserves the existing behavior,
+#'   `"clear"` removes matching entries, and `"prune"` removes matching entries
+#'   that are expired, unreadable, or do not contain the expected metadata
+#'   columns.
 #' @inheritParams boj_metadata
 #'
-#' @return A combined metadata tibble. The data are also written to the
-#'   per-database cache.
+#' @return For `action = "refresh"`, a combined metadata tibble that is also
+#'   written to the per-database cache. For `"clear"` and `"prune"`, a tibble
+#'   reporting each matched file, path, status, and reason.
 #' @export
 #' @examples
 #' \dontrun{
 #' current_fx_metadata <- boj_cache("FM08")
 #' all_metadata <- boj_cache()
+#' boj_cache(action = "prune")
+#' boj_cache("FM08", action = "clear")
 #' }
 boj_cache <- function(
     db = NULL,
@@ -139,12 +313,29 @@ boj_cache <- function(
     include_groups = TRUE,
     wait = boj_default("wait", 1),
     timeout = boj_default("timeout", 30),
-    retries = boj_default("retries", 3)) {
-  if (is.null(db)) db <- .boj_databases$db
-  if (!is.character(db) || length(db) < 1L || anyNA(db)) {
+    retries = boj_default("retries", 3),
+    action = "refresh") {
+  action <- tolower(boj_scalar_character(action, "action"))
+  if (!action %in% c("refresh", "clear", "prune")) {
+    boj_abort(
+      "`action` must be one of \"refresh\", \"clear\", or \"prune\".",
+      class = "boj_parameter_error"
+    )
+  }
+  lang <- boj_match_lang(lang)
+  cache_dir <- boj_cache_dir(cache_dir)
+
+  if (!is.null(db) && (!is.character(db) || length(db) < 1L || anyNA(db))) {
     boj_abort("`db` must be NULL or a non-empty character vector.", class = "boj_parameter_error")
   }
-  db <- unique(vapply(db, boj_normalize_db, character(1L)))
+  if (!is.null(db)) db <- unique(vapply(db, boj_normalize_db, character(1L)))
+
+  if (!identical(action, "refresh")) {
+    max_age <- boj_scalar_number(max_age, "max_age", min = 0)
+    return(boj_manage_metadata_cache(action, db, lang, max_age, cache_dir))
+  }
+
+  if (is.null(db)) db <- .boj_databases$db
   wait <- boj_scalar_number(wait, "wait", min = 0)
 
   results <- vector("list", length(db))

@@ -2,7 +2,7 @@
 % Please edit documentation in R/metadata.R
 \name{boj_cache}
 \alias{boj_cache}
-\title{Refresh metadata for one or more Bank of Japan databases}
+\title{Refresh or manage Bank of Japan metadata caches}
 \usage{
 boj_cache(
   db = NULL,
@@ -13,18 +13,21 @@ boj_cache(
   include_groups = TRUE,
   wait = boj_default("wait", 1),
   timeout = boj_default("timeout", 30),
-  retries = boj_default("retries", 3)
+  retries = boj_default("retries", 3),
+  action = "refresh"
 )
 }
 \arguments{
 \item{db}{Character vector of database identifiers, or \code{NULL} for all known
-databases.}
+databases when refreshing. For cache management, \code{NULL} means all bojapi
+metadata cache entries.}
 
 \item{lang}{Response language, \code{"en"} or \code{"jp"}. Japanese responses also
 contain some English fields, but this function consistently returns the
 requested language in \code{name}, \code{unit}, \code{category}, and \code{notes}.}
 
-\item{refresh}{Ignore current cache entries and download fresh metadata.}
+\item{refresh}{Ignore current cache entries and download fresh metadata.
+Used only when \code{action = "refresh"}.}
 
 \item{max_age}{Maximum cache age in seconds; default 86,400 (24 hours).}
 
@@ -33,16 +36,23 @@ requested language in \code{name}, \code{unit}, \code{category}, and \code{notes
 \item{include_groups}{Include hierarchy-heading rows whose \code{series_code} is
 blank. These rows are useful when constructing \code{\link[=boj_layer]{boj_layer()}} queries.}
 
-\item{wait}{Seconds between automatic requests. The default is one second to
-avoid high-frequency access prohibited by the BOJ.}
+\item{wait}{Requested seconds between automatic requests. The default is one
+second, and values below one are treated as one whenever another request is
+needed, to avoid high-frequency access prohibited by the BOJ.}
 
 \item{timeout}{Request timeout in seconds.}
 
 \item{retries}{Number of retries for network and transient server errors.}
+
+\item{action}{Cache operation: \code{"refresh"} preserves the existing behavior,
+\code{"clear"} removes matching entries, and \code{"prune"} removes matching entries
+that are expired, unreadable, or do not contain the expected metadata
+columns.}
 }
 \value{
-A combined metadata tibble. The data are also written to the
-per-database cache.
+For \code{action = "refresh"}, a combined metadata tibble that is also
+written to the per-database cache. For \code{"clear"} and \code{"prune"}, a tibble
+reporting each matched file, path, status, and reason.
 }
 \description{
 \code{boj_cache()} is the counterpart to \code{WDI::WDIcache()}: it retrieves current
@@ -50,9 +60,19 @@ BOJ metadata and saves it to the local cache used by \code{\link[=boj_search]{bo
 \code{db = NULL}, all databases in \code{\link[=boj_databases]{boj_databases()}} are refreshed. This takes
 about one minute with the default one-second interval.
 }
+\details{
+Set \code{action = "clear"} to remove matching cache entries, or
+\code{action = "prune"} to remove only expired or invalid entries. For these
+management actions, \code{db = NULL} targets all bojapi metadata cache files in
+\code{cache_dir}, including both languages. Supplying \code{db} limits the operation
+to those databases and the selected \code{lang}. Other files and directories are
+never recursively removed.
+}
 \examples{
 \dontrun{
 current_fx_metadata <- boj_cache("FM08")
 all_metadata <- boj_cache()
+boj_cache(action = "prune")
+boj_cache("FM08", action = "clear")
 }
 }

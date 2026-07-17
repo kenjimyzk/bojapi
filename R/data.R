@@ -17,8 +17,9 @@
 #' @param lang Response language, `"en"` or `"jp"`.
 #' @param wide If `FALSE` (default), return normalized long data. If `TRUE`,
 #'   return `time`, parsed `date`, and one column per code or alias.
-#' @param wait Seconds between automatic requests. The default is one second to
-#'   avoid high-frequency access prohibited by the BOJ.
+#' @param wait Requested seconds between automatic requests. The default is one
+#'   second, and values below one are treated as one whenever another request is
+#'   needed, to avoid high-frequency access prohibited by the BOJ.
 #' @param timeout Request timeout in seconds.
 #' @param retries Number of retries for network and transient server errors.
 #'

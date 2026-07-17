@@ -9,7 +9,7 @@ test_that("series responses become normalized long data", {
   expect_identical(out$series, c("usd_yen", "usd_yen"))
   expect_identical(out$series_code, c("FXERM07", "FXERM07"))
   expect_equal(out$date, as.Date(c("2024-01-01", "2024-02-01")))
-  expect_equal(out$value[[1L]], 146.59)
+  expect_equal(out$value[[1L]], 1.25)
   expect_true(is.na(out$value[[2L]]))
   expect_equal(out$last_update[[1L]], as.Date("2026-07-03"))
 })
@@ -68,6 +68,5 @@ test_that("wide output uses series aliases", {
   )
   wide <- bojapi:::boj_widen(data)
   expect_named(wide, c("time", "date", "usd_yen"))
-  expect_equal(wide$usd_yen[[1L]], 146.59)
+  expect_equal(wide$usd_yen[[1L]], 1.25)
 })
-

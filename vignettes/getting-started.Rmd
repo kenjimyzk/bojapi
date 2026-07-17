@@ -87,12 +87,17 @@ paths.
 
 ## Be a considerate API user
 
-The BOJ prohibits excessive access frequency. `bojapi` waits one second between
-automatic pages and 250-code chunks. You may increase the delay globally:
+The BOJ prohibits excessive access frequency. `bojapi` waits at least one second
+between automatic pages and 250-code chunks. You may increase the delay
+globally:
 
 ```{r}
 options(bojapi.wait = 2)
 ```
+
+Expired or invalid metadata cache files are removed when encountered. To manage
+the cache explicitly, use `boj_cache(action = "prune")` or
+`boj_cache(action = "clear")`.
 
 Before publishing a service, read the current official notice. It asks service
 publishers to display a specified credit and notify the BOJ Research and
@@ -102,4 +107,3 @@ Statistics Department.
 boj_api_credit("en")
 boj_api_credit("jp")
 ```
-

@@ -6,8 +6,10 @@
 \alias{bojapi-package}
 \title{bojapi: Bank of Japan time-series data for R}
 \description{
-\code{bojapi} is a client for the official Bank of Japan (BOJ) Time-Series Data
-Search API. It provides a small workflow:
+\code{bojapi} is an unofficial, independently developed client for the official
+Bank of Japan (BOJ) Time-Series Data Search API. It is not affiliated with,
+endorsed by, or maintained by the Bank of Japan. It provides a small
+workflow:
 }
 \details{
 \enumerate{
@@ -17,15 +19,16 @@ Search API. It provides a small workflow:
 }
 
 The BOJ API requires no API key. To respect the BOJ prohibition on
-high-frequency access, automatic multi-request operations wait one second
-between requests by default. Change this per call with \code{wait}, or globally
-with \code{options(bojapi.wait = 2)}.
+high-frequency access, automatic multi-request operations wait at least one
+second between requests. Increase this per call with \code{wait}, or globally with
+\code{options(bojapi.wait = 2)}; values below one are treated as one.
 }
 \section{Package options}{
 
 \itemize{
 \item \code{bojapi.lang}: default response language, \code{"en"} or \code{"jp"}.
-\item \code{bojapi.wait}: seconds between automatic requests; default \code{1}.
+\item \code{bojapi.wait}: requested seconds between automatic requests; default and
+enforced minimum \code{1}.
 \item \code{bojapi.timeout}: request timeout in seconds; default \code{30}.
 \item \code{bojapi.retries}: retries for transient failures; default \code{3}.
 \item \code{bojapi.cache_dir}: metadata cache directory.
@@ -37,6 +40,8 @@ with \code{options(bojapi.wait = 2)}.
 Public services using the API must follow the BOJ's current API notice,
 including its requested credit and release notification. Use
 \code{\link[=boj_api_credit]{boj_api_credit()}} to retrieve the credit and official links.
+The package's MIT license applies to original \code{bojapi} code and documentation;
+it does not relicense BOJ-originated or other third-party content.
 }
 
 \seealso{
@@ -44,7 +49,12 @@ including its requested credit and release notification. Use
 \href{https://www.stat-search.boj.or.jp/info/api_notice_en.pdf}{BOJ API notice}
 }
 \author{
-\strong{Maintainer}: Kenji Miyazaki \email{kenjimyzk@users.noreply.github.com}
+\strong{Maintainer}: Kenji Miyazaki \email{kenjimyzk@gmail.com}
+
+Authors:
+\itemize{
+  \item Kenji Miyazaki \email{kenjimyzk@gmail.com}
+}
 
 }
 \keyword{internal}

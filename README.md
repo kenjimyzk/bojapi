@@ -17,7 +17,7 @@ and the API behavior of returning errors as JSON even when CSV is requested.
 - `boj_layer()`: Retrieve multiple series using the five-level hierarchy
 - `boj_metadata()`: Retrieve normalized metadata, including hierarchy,
   coverage, update dates, and notes
-- `boj_cache()`: Refresh metadata in a WDIcache-style workflow
+- `boj_cache()`: Refresh, prune, or clear metadata in a WDIcache-style workflow
 - Automatic batching in groups of 250 series and complete `NEXTPOSITION`
   pagination
 - Missing values retained as observation rows containing `NA`
@@ -37,7 +37,7 @@ install.packages("remotes")
 remotes::install_local(".")
 ```
 
-After the package is published on GitHub, the intended installation command is:
+Install the development version from GitHub with:
 
 ```r
 remotes::install_github("kenjimyzk/bojapi")
@@ -125,15 +125,23 @@ Because a package named `BOJ` already exists on CRAN, this package is named
 coverage metadata, missing observations, automatic pagination, and delays
 between requests.
 
+Both `bojapi` and `bbk` export functions named `boj_data()` and
+`boj_metadata()`. If both packages are attached, use `bojapi::boj_data()` and
+`bojapi::boj_metadata()` to select this implementation explicitly.
+
 ## Request rate and errors
 
 The BOJ prohibits high-frequency access over a short period. When an operation
-requires multiple requests, `bojapi` waits one second by default. Do not shorten
-this interval; increase it when appropriate.
+requires multiple requests, `bojapi` waits at least one second. Values below one
+are treated as one; increase the interval when appropriate.
 
 ```r
 options(bojapi.wait = 2, bojapi.timeout = 60, bojapi.retries = 3)
 ```
+
+Expired or invalid metadata cache entries are removed when encountered. You can
+also manage the cache explicitly with `boj_cache(action = "prune")` or
+`boj_cache(action = "clear")`.
 
 API errors have class `boj_api_response_error`, communication errors have class
 `boj_http_error`, and unexpected response structures have class
@@ -152,9 +160,20 @@ boj_api_credit("en")
 ```
 
 The terms may change without notice, so always check the official document
-before publishing a service. The package's MIT license applies only to its
-source code; it does not relicense data, metadata, documents, or other material
-provided by the Bank of Japan.
+before publishing a service. The MIT license applies to the original code and
+documentation authored for `bojapi`. It does not relicense Bank of Japan data,
+metadata, database identifiers or names, prescribed credit text, official
+documents, or other third-party content. See [COPYRIGHTS](inst/COPYRIGHTS) and
+[NOTICE](inst/NOTICE.md) for the source and rights boundaries.
+
+## Acknowledgements
+
+`bojapi` was implemented independently. Its user-facing workflow and package
+design were informed by the public interfaces and examples of
+[`WDI`](https://github.com/vincentarelbundock/WDI),
+[`estatapi`](https://github.com/yutannihilation/estatapi), and
+[`BOJ_API`](https://github.com/miwamasa/BOJ_API). We thank their authors and
+contributors.
 
 ## API documentation
 

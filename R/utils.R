@@ -177,11 +177,13 @@ boj_chunks <- function(x, size = .bojapi_max_codes) {
   split(x, ceiling(seq_along(x) / size))
 }
 
+boj_sleep <- function(seconds) {
+  Sys.sleep(seconds)
+}
+
 boj_pause <- function(wait) {
   wait <- boj_scalar_number(wait, "wait", min = 0)
-  if (wait > 0) {
-    Sys.sleep(wait)
-  }
+  boj_sleep(max(1, wait))
   invisible(NULL)
 }
 

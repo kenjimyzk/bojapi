@@ -53,8 +53,9 @@ requested language in \code{name}, \code{unit}, \code{category}, and \code{notes
 
 \item{include_groups}{Include matching hierarchy-heading rows.}
 
-\item{wait}{Seconds between automatic requests. The default is one second to
-avoid high-frequency access prohibited by the BOJ.}
+\item{wait}{Requested seconds between automatic requests. The default is one
+second, and values below one are treated as one whenever another request is
+needed, to avoid high-frequency access prohibited by the BOJ.}
 
 \item{timeout}{Request timeout in seconds.}
 

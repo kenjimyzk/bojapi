@@ -4,10 +4,12 @@ Version: 0.1.0
 Authors@R: 
     person("Kenji", "Miyazaki", email = "kenjimyzk@gmail.com",
            role = c("aut", "cre"))
-Description: An unofficial, tidy, rate-limited interface to the Bank of Japan
-    Time-Series Data Search API. Search series metadata, retrieve observations
+Description: An unofficial, tidy, rate-limited interface to the 'Bank of Japan
+    Time-Series Data Search' API. Search series metadata, retrieve observations
     by series code or hierarchy, follow pagination automatically, and work with
     normalized long or wide data frames. The API does not require an API key.
+URL: https://github.com/kenjimyzk/bojapi
+BugReports: https://github.com/kenjimyzk/bojapi/issues
 License: MIT + file LICENSE
 Depends:
     R (>= 4.1.0)

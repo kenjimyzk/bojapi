@@ -1,0 +1,34 @@
+Original bojapi material
+========================
+
+The original R source code, tests, and documentation authored for bojapi are:
+
+  Copyright (c) 2026 Kenji Miyazaki
+
+and are distributed under the MIT license declared in DESCRIPTION.
+
+Bank of Japan-originated material
+=================================
+
+The fixed database identifiers and English and Japanese database names used by
+boj_databases() are based on the Bank of Japan's API manuals dated February 18,
+2026:
+
+  https://www.stat-search.boj.or.jp/info/api_manual_en.pdf
+  https://www.stat-search.boj.or.jp/info/api_manual.pdf
+
+The prescribed English and Japanese credit text is reproduced from the Bank of
+Japan's notices:
+
+  https://www.stat-search.boj.or.jp/info/api_notice_en.pdf
+  https://www.stat-search.boj.or.jp/info/api_notice.pdf
+
+Test fixtures reproduce selected API field names and illustrative series
+metadata to validate response parsing. Their numerical observations are
+synthetic and are not Bank of Japan observations.
+
+These Bank of Japan-originated identifiers, names, and credit text are not
+relicensed under the bojapi MIT license. Any rights in them remain with their
+respective rightsholders, and their use remains subject to the current
+applicable terms. No actual Bank of Japan time-series observations or API
+manuals are bundled in the source or installed package.

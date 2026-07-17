@@ -39,8 +39,9 @@ blank. These rows are useful when constructing \code{\link[=boj_layer]{boj_layer
 
 \item{retries}{Number of retries for network and transient server errors.}
 
-\item{wait}{Seconds between automatic requests. The default is one second to
-avoid high-frequency access prohibited by the BOJ.}
+\item{wait}{Requested seconds between automatic requests. The default is one
+second, and values below one are treated as one whenever another request is
+needed, to avoid high-frequency access prohibited by the BOJ.}
 }
 \value{
 A tibble with normalized metadata. \code{start_time} and \code{end_time}

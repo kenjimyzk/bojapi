@@ -34,8 +34,9 @@ are \code{YYYY} or \code{YYYYPP}; daily and weekly filters also use \code{YYYYMM
 \item{wide}{If \code{FALSE} (default), return normalized long data. If \code{TRUE},
 return \code{time}, parsed \code{date}, and one column per code or alias.}
 
-\item{wait}{Seconds between automatic requests. The default is one second to
-avoid high-frequency access prohibited by the BOJ.}
+\item{wait}{Requested seconds between automatic requests. The default is one
+second, and values below one are treated as one whenever another request is
+needed, to avoid high-frequency access prohibited by the BOJ.}
 
 \item{timeout}{Request timeout in seconds.}
 
