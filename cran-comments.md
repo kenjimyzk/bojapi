@@ -13,3 +13,4 @@ The notes are:
 
 Live API tests are opt-in through `BOJAPI_RUN_LIVE_TESTS=true`; regular tests use
 deterministic fixtures and do not contact the Bank of Japan.
+

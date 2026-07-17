@@ -1,143 +1,164 @@
+**English** | [日本語](https://github.com/kenjimyzk/bojapi/blob/main/README.ja.md)
+
 # bojapi
 
-`bojapi` は、日本銀行「時系列統計データ検索サイト」の公式APIにRから
-アクセスするための非公式パッケージです。APIキーは不要です。
+`bojapi` is an unofficial R package for accessing the official API of the
+Bank of Japan Time-Series Data Search site. No API key is required.
 
-WDIと同じように「メタデータを検索して系列コードを見つけ、期間を指定して
-データフレームとして取得する」流れを中心にしています。内部通信はJSONを
-使い、日本語CSVの文字コード差や、CSV指定時にもエラーだけJSONで返る仕様を
-避けています。
+Its primary workflow is similar to WDI: search the metadata to find series
+codes, specify a period, and retrieve the observations as a data frame. The
+package uses JSON internally, avoiding differences in Japanese CSV encodings
+and the API behavior of returning errors as JSON even when CSV is requested.
 
-## 主な機能
+## Features
 
-- `boj_search()`: 系列名・コード・カテゴリ・備考を検索
-- `boj_data()`: 系列コードによる時系列取得
-- `boj_layer()`: 5階層の分類による一括取得
-- `boj_metadata()`: 階層・収録期間・更新日・備考を含む全メタデータ
-- `boj_cache()`: WDIcache型のメタデータ更新
-- 250系列ごとの自動分割と`NEXTPOSITION`の完全追跡
-- 欠損値を`NA`の観測行として保持
-- named vectorによる系列名の付与、long／wide出力
-- 日次・月次・四半期・半期・年度を区別した日付変換
-- gzip、timeout、再試行、ページ間の既定1秒待機
-- 英語・日本語レスポンス
+- `boj_search()`: Search series names, codes, categories, and notes
+- `boj_data()`: Retrieve time series by series code
+- `boj_layer()`: Retrieve multiple series using the five-level hierarchy
+- `boj_metadata()`: Retrieve normalized metadata, including hierarchy,
+  coverage, update dates, and notes
+- `boj_cache()`: Refresh metadata in a WDIcache-style workflow
+- Automatic batching in groups of 250 series and complete `NEXTPOSITION`
+  pagination
+- Missing values retained as observation rows containing `NA`
+- Series aliases through named vectors, with long and wide output
+- Frequency-aware date conversion for daily, weekly, monthly, quarterly,
+  calendar-half-year, fiscal-half-year, calendar-year, and fiscal-year data
+- gzip compression, timeouts, retries, and a default one-second delay between
+  pages
+- English and Japanese API responses
 
-## インストール
+## Installation
 
-開発版はリポジトリのルートからインストールできます。
+Install the development version from the repository root:
 
 ```r
 install.packages("remotes")
 remotes::install_local(".")
 ```
 
-公開後は次の形式を想定しています。
+After the package is published on GitHub, the intended installation command is:
 
 ```r
 remotes::install_github("kenjimyzk/bojapi")
 ```
 
-## クイックスタート
+## Quick start
 
 ```r
 library(bojapi)
 
-# 1. DBを確認
+# 1. List available databases
 boj_databases()
 
-# 2. 系列コードを検索（結果は24時間キャッシュ）
+# 2. Search for a series code (the metadata are cached for 24 hours)
 boj_search("U.S. Dollar", db = "FM08")
 boj_search("米ドル", db = "FM08", lang = "jp")
 
-# 3. 月次のドル円を取得
+# 3. Retrieve monthly U.S. dollar/yen exchange rates
 fx <- boj_data(
   db = "FM08",
   code = c(usd_yen = "FXERM07"),
   start_date = "202401",
-  end_date = "202412"
+  end_date = "202412",
+  lang = "en"
 )
 
 fx
 ```
 
-long形式では、BOJの期間コードを`time`にそのまま保持し、分析用の日付を
-`date`に格納します。四半期の`202402`は2024年2月ではなく、2024年第2四半期
-なので`date = 2024-04-01`になります。
+Supply series codes without the database prefix. All codes in a single
+`boj_data()` call must have the same frequency.
+
+In long output, `time` preserves the original BOJ period code and `date`
+contains a parsed date for analysis. For quarterly data, `202402` means the
+second quarter of 2024, not February 2024, so it becomes
+`date = 2024-04-01`.
 
 ```r
-# 複数系列をwide形式で取得
+# Retrieve multiple series in wide format
 fx_wide <- boj_data(
   "FM08",
   c(month_end = "FXERM06", monthly_average = "FXERM07"),
   start_date = "202401",
   end_date = "202412",
+  lang = "en",
   wide = TRUE
 )
 ```
 
-## 階層API
+## Hierarchy API
 
-系列コードを個別に並べなくても、メタデータの`layer1`～`layer5`を使って
-カテゴリ単位で取得できます。
+You can retrieve a category of series using metadata fields `layer1` through
+`layer5`, without listing every series code individually.
 
 ```r
-meta <- boj_metadata("BP01", include_groups = TRUE)
+meta <- boj_metadata("BP01", lang = "en", include_groups = TRUE)
 
 balance_of_payments <- boj_layer(
   db = "BP01",
   frequency = "M",
   layer = c(1, 1, 1),
   start_date = "202504",
-  end_date = "202509"
+  end_date = "202509",
+  lang = "en"
 )
 ```
 
-階層条件が1,250系列を超える場合、BOJ APIは`frequency`で絞る前にエラーを
-返します。その場合は階層1などを分割してください。
+The BOJ API returns an error when a hierarchy condition matches more than
+1,250 series. This limit is evaluated before the `frequency` filter. If it is
+exceeded, split the query by the first hierarchy level or another suitable
+level.
 
-## 既存Rパッケージとの違い
+## Comparison with existing R packages
 
-CRANにはすでに`BOJ`があるため、本パッケージ名は`bojapi`としています。
+Because a package named `BOJ` already exists on CRAN, this package is named
+`bojapi`.
 
-| パッケージ | 主な対象 | 新APIコード取得 | 階層API | WDI型検索 | 250系列超の自動分割 |
+| Package | Primary data source | New code API | Hierarchy API | WDI-style search | Automatic batching beyond 250 series |
 |---|---|---:|---:|---:|---:|
-| `BOJ` | 従来の一括フラットファイル | - | - | - | - |
-| `bbk` | 複数中央銀行API | ✓ | - | - | - |
-| `bojapi` | BOJ新API専用 | ✓ | ✓ | ✓ | ✓ |
+| `BOJ` | Legacy bulk flat files | - | - | - | - |
+| `bbk` | Multiple central-bank APIs | ✓ | - | - | - |
+| `bojapi` | Dedicated BOJ new-API client | ✓ | ✓ | ✓ | ✓ |
 
-`bojapi` は、新APIの全メタデータ項目、欠損観測、自動ページング、アクセス間隔
-まで含めて扱う専用クライアントです。
+`bojapi` is a dedicated client that also handles normalized hierarchy and
+coverage metadata, missing observations, automatic pagination, and delays
+between requests.
 
-## アクセス頻度とエラー
+## Request rate and errors
 
-BOJは短時間の高頻度アクセスを禁止しています。複数リクエストが必要な場合、
-`bojapi`は既定で1秒待機します。短縮せず、必要に応じて長くしてください。
+The BOJ prohibits high-frequency access over a short period. When an operation
+requires multiple requests, `bojapi` waits one second by default. Do not shorten
+this interval; increase it when appropriate.
 
 ```r
 options(bojapi.wait = 2, bojapi.timeout = 60, bojapi.retries = 3)
 ```
 
-APIエラーは`boj_api_response_error`、通信エラーは`boj_http_error`、構造変更等は
-`boj_parse_error`クラスを持つconditionとして返ります。該当データなし
-（`M181030I`）はエラーではなく、warningと型の揃った空tibbleを返します。
+API errors have class `boj_api_response_error`, communication errors have class
+`boj_http_error`, and unexpected response structures have class
+`boj_parse_error`. A no-data response (`M181030I`) is not an error: the package
+issues a warning and returns an empty tibble with consistent column types.
 
-## 公開サービスでのクレジット
+## Credit for public services
 
-本パッケージを使ったサービスを公開する場合、日本銀行の
-[API機能利用時の留意点](https://www.stat-search.boj.or.jp/info/api_notice.pdf)
-に従い、指定クレジットを表示し、調査統計局へ公開を連絡してください。
+If you publish a service that uses this package, follow the Bank of Japan's
+[Notice Regarding the Use of the API Service](https://www.stat-search.boj.or.jp/info/api_notice_en.pdf),
+including displaying the requested credit and notifying the Research and
+Statistics Department about the release.
 
 ```r
-boj_api_credit("jp")
+boj_api_credit("en")
 ```
 
-利用条件は予告なく変更されるため、公開前に必ず公式文書を再確認してください。
-本パッケージのMITライセンスはソースコードだけに適用され、日本銀行のデータ、
-メタデータ、文書等を再ライセンスするものではありません。
+The terms may change without notice, so always check the official document
+before publishing a service. The package's MIT license applies only to its
+source code; it does not relicense data, metadata, documents, or other material
+provided by the Bank of Japan.
 
-## 仕様資料
+## API documentation
 
-- [API機能利用マニュアル](https://www.stat-search.boj.or.jp/info/api_manual.pdf)
-- [API機能利用時の留意点](https://www.stat-search.boj.or.jp/info/api_notice.pdf)
-- [英語版APIマニュアル](https://www.stat-search.boj.or.jp/info/api_manual_en.pdf)
-
+- [API Manual](https://www.stat-search.boj.or.jp/info/api_manual_en.pdf)
+- [Notice Regarding the Use of the API Service](https://www.stat-search.boj.or.jp/info/api_notice_en.pdf)
+- [Japanese API Manual](https://www.stat-search.boj.or.jp/info/api_manual.pdf)
+- [Japanese Notice Regarding the Use of the API Service](https://www.stat-search.boj.or.jp/info/api_notice.pdf)
