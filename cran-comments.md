@@ -1,12 +1,29 @@
 ## Test environments
 
 - local macOS Tahoe 26.5.2 (arm64), R 4.5.2
+- GitHub Actions, Ubuntu 24.04.4 LTS (x86_64), R 4.6.1
+- R-hub, Ubuntu 24.04.4 LTS (x86_64), R-devel
+  (2026-06-21 r90185)
+- R-hub, Windows Server 2022 x64 (x86_64), R-devel
+  (2026-07-16 r90264 ucrt)
+- R-hub, macOS Sequoia 15.7.7 (x86_64), R-devel
+  (2026-06-24 r90190)
 
 ## R CMD check results
 
+The GitHub Actions and R-hub checks for commit
+`2c5ffc68bc0f8b0b8ce56c235b4ca002ecd74bc1` completed with:
+
+0 errors | 0 warnings | 0 notes
+
+- [GitHub Actions R-release check](https://github.com/kenjimyzk/bojapi/actions/runs/29555461158)
+- [R-hub R-devel checks on Linux, Windows, and macOS](https://github.com/kenjimyzk/bojapi/actions/runs/29555705848)
+
+The local `R CMD check --as-cran` completed with:
+
 0 errors | 0 warnings | 2 notes
 
-The notes are:
+The local notes are:
 
 - the expected `New submission` note for version 0.1.0;
 - local HTML validation was skipped because the installed HTML Tidy is too old.
